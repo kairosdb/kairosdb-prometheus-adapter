@@ -54,7 +54,7 @@ public class WriteAdapterResource
                     }
                 }
 
-                checkState(StringUtils.isNullOrEmpty(metricName), "No metric name was specified for the given metric.");
+                checkState(!StringUtils.isNullOrEmpty(metricName), "No metric name was specified for the given metric." );
 
                 for (Sample sample : timeSeries.getSamplesList()) {
                     DoubleDataPoint dataPoint = new DoubleDataPoint(sample.getTimestamp(), sample.getValue());
