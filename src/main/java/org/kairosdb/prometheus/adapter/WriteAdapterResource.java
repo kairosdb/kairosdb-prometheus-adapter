@@ -3,7 +3,6 @@ package org.kairosdb.prometheus.adapter;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.ImmutableSortedMap.Builder;
 import com.google.inject.Inject;
-import org.apache.http.entity.StringEntity;
 import org.h2.util.StringUtils;
 import org.kairosdb.core.datapoints.DoubleDataPoint;
 import org.kairosdb.eventbus.FilterEventBus;
@@ -22,7 +21,6 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.nio.charset.Charset;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
@@ -34,17 +32,11 @@ public class WriteAdapterResource
 
     private final Publisher<DataPointEvent> dataPointPublisher;
 
-    @Inject
-    public WriteAdapterResource(FilterEventBus eventBus)
-    {
-        checkNotNull(eventBus, "eventBus must not be null");
-        this.dataPointPublisher = eventBus.createPublisher(DataPointEvent.class);
-    }
-
     @SuppressWarnings("ConstantConditions")
+    //    @Consumes("application/protobuf")
+
     @POST
     @Consumes(MediaType.WILDCARD) // Todo Is there a better way?
-//    @Consumes("application/protobuf")
     @Produces("text/plain")
     @Path("/write")
     public Response write(WriteRequest request)
@@ -74,8 +66,14 @@ public class WriteAdapterResource
         }
         catch (Exception e) {
             logger.error("Error processing request: " + request.toString(), e);
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(
-                    new StringEntity(e.getMessage(), Charset.forName("UTF-8"))).build();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.getMessage()).build();
         }
+    }
+
+    @Inject
+    public WriteAdapterResource(FilterEventBus eventBus)
+    {
+        checkNotNull(eventBus, "eventBus must not be null");
+        this.dataPointPublisher = eventBus.createPublisher(DataPointEvent.class);
     }
 }

@@ -11,6 +11,5 @@ public class PrometheusAdapterModule extends AbstractModule
         bind(ReadAdapterResource.class).in(Singleton.class);
         bind(WriteAdapterResource.class).in(Singleton.class);
         bind(ProtocolBufferMessageBodyProvider.class).in(Singleton.class);
-//        bind(SnappyReaderInterceptor.class).in(Singleton.class);
     }
 }
