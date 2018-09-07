@@ -41,6 +41,7 @@ public class WriteAdapterResource
 
     // todo Prefix from configuration?
     // todo replace instance tag with "host"
+    // todo unit tests
 
     @Inject
     public WriteAdapterResource(FilterEventBus eventBus)
@@ -79,10 +80,9 @@ public class WriteAdapterResource
                     publishMetric(metricName, sample.getTimestamp(), sample.getValue(), tagBuilder.build());
                     metricsSent++;
                 }
-
-                publishMetric(METRIC_METRICS_SENT, metricsSent, "success", "true");
-                publishMetric(METRIC_METRICS_SENT, request.getTimeseriesList().size() - metricsSent, "success", "false");
             }
+            publishMetric(METRIC_METRICS_SENT, metricsSent, "success", "true");
+            publishMetric(METRIC_METRICS_SENT, request.getTimeseriesList().size() - metricsSent, "success", "false");
 
             return Response.status(Response.Status.OK).build();
         }
