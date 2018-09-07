@@ -6,6 +6,7 @@ import com.google.inject.Inject;
 import org.apache.http.entity.StringEntity;
 import org.h2.util.StringUtils;
 import org.kairosdb.core.datapoints.DoubleDataPoint;
+import org.kairosdb.eventbus.FilterEventBus;
 import org.kairosdb.eventbus.Publisher;
 import org.kairosdb.events.DataPointEvent;
 import org.slf4j.Logger;
@@ -33,9 +34,10 @@ public class WriteAdapterResource
     private final Publisher<DataPointEvent> dataPointPublisher;
 
     @Inject
-    public WriteAdapterResource(Publisher<DataPointEvent> dataPointPublisher)
+    public WriteAdapterResource(FilterEventBus eventBus)
     {
-        this.dataPointPublisher = checkNotNull(dataPointPublisher, "dataPointPublisher must not be null");
+        checkNotNull(eventBus, "eventBus must not be null");
+        this.dataPointPublisher = eventBus.createPublisher(DataPointEvent.class);
     }
 
     @SuppressWarnings("ConstantConditions")
