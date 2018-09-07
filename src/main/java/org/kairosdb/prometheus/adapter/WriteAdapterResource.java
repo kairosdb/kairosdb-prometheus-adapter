@@ -2,6 +2,7 @@ package org.kairosdb.prometheus.adapter;
 
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.ImmutableSortedMap.Builder;
+import com.google.inject.Inject;
 import org.apache.http.entity.StringEntity;
 import org.h2.util.StringUtils;
 import org.kairosdb.core.datapoints.DoubleDataPoint;
@@ -31,6 +32,7 @@ public class WriteAdapterResource
 
     private final Publisher<DataPointEvent> dataPointPublisher;
 
+    @Inject
     public WriteAdapterResource(Publisher<DataPointEvent> dataPointPublisher)
     {
         this.dataPointPublisher = checkNotNull(dataPointPublisher, "dataPointPublisher must not be null");
@@ -62,8 +64,6 @@ public class WriteAdapterResource
                     DoubleDataPoint dataPoint = new DoubleDataPoint(sample.getTimestamp(), sample.getValue());
                     dataPointPublisher.post(new DataPointEvent(metricName, tagBuilder.build(), dataPoint));
                 }
-
-                // todo anyway to send something back to prometheus to say it failed? return something other than 200?
             }
 
             return Response.status(Response.Status.OK).build();
