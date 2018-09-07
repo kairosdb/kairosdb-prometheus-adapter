@@ -19,6 +19,7 @@ import prometheus.Types.TimeSeries;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.nio.charset.Charset;
@@ -44,6 +45,7 @@ public class WriteAdapterResource
     @POST
     @Consumes(MediaType.WILDCARD) // Todo Is there a better way?
 //    @Consumes("application/protobuf")
+    @Produces("text/html")
     @Path("/write")
     public Response write(WriteRequest request)
     {
