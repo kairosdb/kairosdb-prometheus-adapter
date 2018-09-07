@@ -45,7 +45,7 @@ public class WriteAdapterResource
     @POST
     @Consumes(MediaType.WILDCARD) // Todo Is there a better way?
 //    @Consumes("application/protobuf")
-    @Produces("text/html")
+    @Produces("text/plain")
     @Path("/write")
     public Response write(WriteRequest request)
     {
