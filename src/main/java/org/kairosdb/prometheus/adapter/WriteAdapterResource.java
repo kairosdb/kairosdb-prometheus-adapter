@@ -81,8 +81,13 @@ public class WriteAdapterResource
                     metricsSent++;
                 }
             }
+
             publishMetric(METRIC_METRICS_SENT, metricsSent, "success", "true");
-            publishMetric(METRIC_METRICS_SENT, request.getTimeseriesList().size() - metricsSent, "success", "false");
+
+            int metricsFailed = request.getTimeseriesList().size() - metricsSent;
+            if (metricsFailed > 0) {
+                publishMetric(METRIC_METRICS_SENT, metricsFailed, "success", "false");
+            }
 
             return Response.status(Response.Status.OK).build();
         }
