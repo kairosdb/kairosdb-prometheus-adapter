@@ -42,6 +42,7 @@ public class WriteAdapterResource
     // todo Prefix from configuration?
     // todo replace instance tag with "host"
     // todo unit tests
+    // todo how to best configure the prometheus send rate. How often should that be? what if we wait for 1 minute?
 
     @Inject
     public WriteAdapterResource(FilterEventBus eventBus)
