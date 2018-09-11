@@ -25,6 +25,10 @@ import javax.ws.rs.core.Response;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.HashSet;
+import java.util.Properties;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
@@ -33,24 +37,29 @@ import static com.google.common.base.Preconditions.checkState;
 public class WriteAdapterResource
 {
     private static final Logger logger = LoggerFactory.getLogger(WriteAdapterResource.class);
-    public static final String METRIC_METRICS_SENT = "prometheus.write-adapter.metrics-sent.count";
-    public static final String METRIC_EXCEPTIONS = "prometheus.write-adapter.exception.count";
+    private static final String METRIC_METRICS_SENT = "prometheus.write-adapter.metrics-sent.count";
+    private static final String METRIC_EXCEPTIONS = "prometheus.write-adapter.exception.count";
 
     private final Publisher<DataPointEvent> dataPointPublisher;
     private final String host;
-
-    // todo Prefix from configuration?
-    // todo replace instance tag with "host"
-    // todo unit tests
-    // todo how to best configure the prometheus send rate. How often should that be? what if we wait for 1 minute?
+    private final String prefix;
+    private final Set<Pattern> dropMetricsRegex = new HashSet<>();
+    private final Set<Pattern> dropLablelsRegex = new HashSet<>();
 
     @Inject
-    public WriteAdapterResource(FilterEventBus eventBus)
+    public WriteAdapterResource(FilterEventBus eventBus, Properties config)
             throws UnknownHostException
     {
         checkNotNull(eventBus, "eventBus must not be null");
+        checkNotNull(config, "config must not be null");
         this.dataPointPublisher = eventBus.createPublisher(DataPointEvent.class);
         host = InetAddress.getLocalHost().getHostName();
+
+        prefix = config.getProperty("kairosdb.service.prometheus-adapter.writer.prefix");
+        String dropMetrics = config.getProperty("kairosdb.service.prometheus-adapter.writer.dropMetrics");
+        String dropLabels = config.getProperty("kairosdb.service.prometheus-adapter.writer.dropLabels");
+        createRegexPatterns(dropMetrics, dropMetricsRegex);
+        createRegexPatterns(dropLabels, dropLablelsRegex);
     }
 
     @SuppressWarnings("ConstantConditions")
@@ -62,40 +71,58 @@ public class WriteAdapterResource
     public Response write(WriteRequest request)
     {
         int metricsSent = 0;
+        int metricsDropped = 0;
         try {
             for (TimeSeries timeSeries : request.getTimeseriesList()) {
                 String metricName = null;
                 Builder<String, String> tagBuilder = ImmutableSortedMap.naturalOrder();
                 for (Label label : timeSeries.getLabelsList()) {
                     if (label.getName().equals("__name__")) {
-                        metricName = label.getValue();
+                        metricName = prefix != null ? prefix + label.getValue() : label.getValue();
                     }
                     else {
-                        tagBuilder.put(label.getName(), label.getValue());
+                        if (shouldKeep(label.getName(), dropLablelsRegex))
+                        {
+                            tagBuilder.put(label.getName(), label.getValue());
+                        }
                     }
                 }
 
-                checkState(!StringUtils.isNullOrEmpty(metricName), "No metric name was specified for the given metric. Missing __name__ label." );
+                checkState(!StringUtils.isNullOrEmpty(metricName), "No metric name was specified for the given metric. Missing __name__ label.");
 
-                for (Sample sample : timeSeries.getSamplesList()) {
-                    publishMetric(metricName, sample.getTimestamp(), sample.getValue(), tagBuilder.build());
-                    metricsSent++;
+                if (shouldKeep(metricName, dropMetricsRegex)) {
+                    for (Sample sample : timeSeries.getSamplesList()) {
+                        publishMetric(metricName, sample.getTimestamp(), sample.getValue(), tagBuilder.build());
+                        metricsSent++;
+                    }
+                }
+                else
+                {
+                    metricsDropped++;
                 }
             }
 
-            publishMetric(METRIC_METRICS_SENT, metricsSent, "success", "true");
-
-            int metricsFailed = request.getTimeseriesList().size() - metricsSent;
-            if (metricsFailed > 0) {
-                publishMetric(METRIC_METRICS_SENT, metricsFailed, "success", "false");
-            }
+            publishMetrics(request.getTimeseriesList().size(), metricsSent, metricsDropped);
 
             return Response.status(Response.Status.OK).build();
         }
-        catch (Exception e) {
+        catch (Throwable e) {
             logger.error("Error processing request: " + request.toString(), e);
             publishMetric(METRIC_EXCEPTIONS, 1, "exception", e.getMessage());
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.getMessage()).build();
+        }
+    }
+
+    private void publishMetrics(int metricsReceived, int metricsSent, int metricsDropped)
+    {
+        publishMetric(METRIC_METRICS_SENT, metricsSent, "status", "sent");
+
+        if (metricsReceived - metricsSent > 0) {
+            publishMetric(METRIC_METRICS_SENT, metricsReceived - metricsSent - metricsDropped, "status", "failed");
+        }
+
+        if (metricsDropped > 0) {
+            publishMetric(METRIC_METRICS_SENT, metricsDropped, "status", "dropped");
         }
     }
 
@@ -111,5 +138,25 @@ public class WriteAdapterResource
         dataPointPublisher.post(new DataPointEvent(metricName,
                 tags,
                 new DoubleDataPoint(timestamp, value)));
+    }
+
+    private static void createRegexPatterns(String patterns, Set<Pattern> patternSet)
+    {
+        if (!StringUtils.isNullOrEmpty(patterns)) {
+            String[] split = patterns.split("\\s*,\\s*");
+            for (String pattern : split) {
+                patternSet.add(Pattern.compile(pattern));
+            }
+        }
+    }
+
+    private static boolean shouldKeep(String value, Set<Pattern> patternSet)
+    {
+        for (Pattern pattern : patternSet) {
+            if (pattern.matcher(value).matches()) {
+                return false;
+            }
+        }
+        return true;
     }
 }
