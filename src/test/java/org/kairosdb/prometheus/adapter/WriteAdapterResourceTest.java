@@ -61,18 +61,18 @@ public class WriteAdapterResourceTest
 
         assertThat(response.getStatus(), equalTo(200));
         verify(mockPublisher).post(new DataPointEvent("metric1", labels, new DoubleDataPoint(timeStamp, 5.0)));
-        verifyInternalMetrics("prometheus.write-adapter.metrics-sent.count", "sent", 1.0);
+        verifyInternalMetrics("kairosdb.prometheus.write-adapter.metrics-sent.count", "sent", 1.0);
     }
 
     @Test
     /*
-     * Verify that metrics that match the kairosdb.service.prometheus-adapter.writer.dropMetrics regex are not added to Kairos.
+     * Verify that metrics that match the kairosdb.plugin.prometheus-adapter.writer.dropMetrics regex are not added to Kairos.
      */
     public void testDroppedMetrics()
             throws UnknownHostException
     {
         Properties properties = new Properties();
-        properties.put("kairosdb.service.prometheus-adapter.writer.dropMetrics", "^foo_.*$");
+        properties.put("kairosdb.plugin.prometheus-adapter.writer.dropMetrics", "^foo_.*$");
         WriteAdapterResource writeAdapterResource = new WriteAdapterResource(mockEventBus, properties);
 
         long timeStamp = System.currentTimeMillis();
@@ -86,19 +86,19 @@ public class WriteAdapterResourceTest
         verify(mockPublisher).post(new DataPointEvent("foo.bar", labels, new DoubleDataPoint(timeStamp, 2.0)));
         verify(mockPublisher, never()).post(new DataPointEvent("foo_bar", labels, new DoubleDataPoint(timeStamp, 1.0)));
         verify(mockPublisher, never()).post(new DataPointEvent("foo_bob", labels, new DoubleDataPoint(timeStamp, 3.0)));
-        verifyInternalMetrics("prometheus.write-adapter.metrics-sent.count", "sent", 1.0);
-        verifyInternalMetrics("prometheus.write-adapter.metrics-sent.count", "dropped", 2.0);
+        verifyInternalMetrics("kairosdb.prometheus.write-adapter.metrics-sent.count", "sent", 1.0);
+        verifyInternalMetrics("kairosdb.prometheus.write-adapter.metrics-sent.count", "dropped", 2.0);
     }
 
     @Test
     /*
-     * Verify that tags that match the kairosdb.service.prometheus-adapter.writer.dropLabels regex are not added with the metric.
+     * Verify that tags that match the kairosdb.plugin.prometheus-adapter.writer.dropLabels regex are not added with the metric.
      */
     public void testDroppedLabels()
             throws UnknownHostException
     {
         Properties properties = new Properties();
-        properties.put("kairosdb.service.prometheus-adapter.writer.dropLabels", "^label1$, ^label2$ ,^label3$");
+        properties.put("kairosdb.plugin.prometheus-adapter.writer.dropLabels", "^label1$, ^label2$ ,^label3$");
         WriteAdapterResource writeAdapterResource = new WriteAdapterResource(mockEventBus, properties);
 
         long timeStamp = System.currentTimeMillis();
@@ -108,18 +108,18 @@ public class WriteAdapterResourceTest
 
         assertThat(response.getStatus(), equalTo(200));
         verify(mockPublisher).post(new DataPointEvent("foo_bar", ImmutableSortedMap.of("fooLabel", "fooValue"), new DoubleDataPoint(timeStamp, 1.0)));
-        verifyInternalMetrics("prometheus.write-adapter.metrics-sent.count", "sent", 1.0);
+        verifyInternalMetrics("kairosdb.prometheus.write-adapter.metrics-sent.count", "sent", 1.0);
     }
 
     @Test
     /*
-     * Verify that prefix from kairosdb.service.prometheus-adapter.writer.prefix is added to the metrics
+     * Verify that prefix from kairosdb.plugin.prometheus-adapter.writer.prefix is added to the metrics
      */
     public void testPrefix()
             throws UnknownHostException
     {
         Properties properties = new Properties();
-        properties.put("kairosdb.service.prometheus-adapter.writer.prefix", "thePrefix.");
+        properties.put("kairosdb.plugin.prometheus-adapter.writer.prefix", "thePrefix.");
         WriteAdapterResource writeAdapterResource = new WriteAdapterResource(mockEventBus, properties);
 
         long timeStamp = System.currentTimeMillis();
@@ -133,7 +133,7 @@ public class WriteAdapterResourceTest
         verify(mockPublisher).post(new DataPointEvent("thePrefix.foo_bar", labels, new DoubleDataPoint(timeStamp, 1.0)));
         verify(mockPublisher).post(new DataPointEvent("thePrefix.foo.bar", labels, new DoubleDataPoint(timeStamp, 2.0)));
         verify(mockPublisher).post(new DataPointEvent("thePrefix.foo_bob", labels, new DoubleDataPoint(timeStamp, 3.0)));
-        verifyInternalMetrics("prometheus.write-adapter.metrics-sent.count", "sent", 3.0);
+        verifyInternalMetrics("kairosdb.prometheus.write-adapter.metrics-sent.count", "sent", 3.0);
     }
 
     @Test
@@ -158,7 +158,7 @@ public class WriteAdapterResourceTest
         verify(mockPublisher, never()).post(new DataPointEvent("thePrefix.foo_bar", labels, new DoubleDataPoint(timeStamp, 1.0)));
         verify(mockPublisher, never()).post(new DataPointEvent("thePrefix.foo.bar", labels, new DoubleDataPoint(timeStamp, 2.0)));
         verify(mockPublisher, never()).post(new DataPointEvent("thePrefix.foo_bob", labels, new DoubleDataPoint(timeStamp, 3.0)));
-        verifyInternalExceptionMetric("prometheus.write-adapter.exception.count", "No metric name was specified for the given metric. Missing __name__ label.");
+        verifyInternalExceptionMetric("kairosdb.prometheus.write-adapter.exception.count", "No metric name was specified for the given metric. Missing __name__ label.");
     }
 
     private void verifyInternalMetrics(String metricName, String status, double count)

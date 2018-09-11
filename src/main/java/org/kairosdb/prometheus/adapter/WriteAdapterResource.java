@@ -55,9 +55,9 @@ public class WriteAdapterResource
         this.dataPointPublisher = eventBus.createPublisher(DataPointEvent.class);
         host = InetAddress.getLocalHost().getHostName();
 
-        prefix = config.getProperty("kairosdb.service.prometheus-adapter.writer.prefix");
-        String dropMetrics = config.getProperty("kairosdb.service.prometheus-adapter.writer.dropMetrics");
-        String dropLabels = config.getProperty("kairosdb.service.prometheus-adapter.writer.dropLabels");
+        prefix = config.getProperty("kairosdb.plugin.prometheus-adapter.writer.prefix");
+        String dropMetrics = config.getProperty("kairosdb.plugin.prometheus-adapter.writer.dropMetrics");
+        String dropLabels = config.getProperty("kairosdb.plugin.prometheus-adapter.writer.dropLabels");
         createRegexPatterns(dropMetrics, dropMetricsRegex);
         createRegexPatterns(dropLabels, dropLablelsRegex);
     }
