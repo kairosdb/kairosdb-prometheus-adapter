@@ -37,8 +37,8 @@ import static com.google.common.base.Preconditions.checkState;
 public class WriteAdapterResource
 {
     private static final Logger logger = LoggerFactory.getLogger(WriteAdapterResource.class);
-    private static final String METRIC_METRICS_SENT = "prometheus.write-adapter.metrics-sent.count";
-    private static final String METRIC_EXCEPTIONS = "prometheus.write-adapter.exception.count";
+    private static final String METRIC_METRICS_SENT = "kairosdb.prometheus.write-adapter.metrics-sent.count";
+    private static final String METRIC_EXCEPTIONS = "kairosdb.prometheus.write-adapter.exception.count";
 
     private final Publisher<DataPointEvent> dataPointPublisher;
     private final String host;
