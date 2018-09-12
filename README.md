@@ -22,3 +22,7 @@ These optional properties provide ways to manipulate or restrict the data writte
 | kairosdb.plugin.prometheus-adapter.writer.prefix      | Prefix prepended to each metric name. |
 | kairosdb.plugin.prometheus-adapter.writer.dropMetrics | This is a comma delimited list of regular expressions. Metric names that match any of the regular expressions are ignored and not added to KairosDB. | 
 | kairosdb.plugin.prometheus-adapter.writer.dropLabels   | This is a comma delimited list of regular expressions. Labels (except for "\_\_name\_\_") that match any of the expressions are not included in metrics written to KairosDB. |
+
+
+### Read Adapter
+Coming Soon...
