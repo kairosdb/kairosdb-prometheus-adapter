@@ -119,7 +119,7 @@ public class WriteAdapterResourceTest
             throws UnknownHostException
     {
         Properties properties = new Properties();
-        properties.put("kairosdb.plugin.prometheus-adapter.writer.prefix", "thePrefix.");
+        properties.put("kairosdb.plugin.prometheus-adapter.prefix", "thePrefix.");
         WriteAdapterResource writeAdapterResource = new WriteAdapterResource(mockEventBus, properties);
 
         long timeStamp = System.currentTimeMillis();

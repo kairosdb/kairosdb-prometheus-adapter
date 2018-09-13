@@ -8,8 +8,10 @@ public class PrometheusAdapterModule extends AbstractModule
     @Override
     protected void configure()
     {
-        bind(ReadAdapterResource.class).in(Singleton.class);
-        bind(WriteAdapterResource.class).in(Singleton.class);
         bind(ProtocolBufferMessageBodyProvider.class).in(Singleton.class);
+
+        bind(ReadAdapterResource.class).in(Singleton.class);
+
+        bind(WriteAdapterResource.class).in(Singleton.class);
     }
 }

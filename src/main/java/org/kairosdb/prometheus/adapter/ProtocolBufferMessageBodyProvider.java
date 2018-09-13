@@ -16,9 +16,10 @@ package org.kairosdb.prometheus.adapter;
  * limitations under the License.
  */
 
-import com.google.common.io.ByteStreams;
 import com.google.protobuf.Message;
-import org.xerial.snappy.Snappy;
+import org.xerial.snappy.SnappyInputStream;
+import org.xerial.snappy.SnappyOutputStream;
+import prometheus.Remote.ReadResponse;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.Produces;
@@ -76,7 +77,7 @@ public class ProtocolBufferMessageBodyProvider
     {
 
         try {
-            byte[] uncompress = Snappy.uncompress(ByteStreams.toByteArray(entityStream));
+            SnappyInputStream uncompressStream = new SnappyInputStream(entityStream);
 
             final Method newBuilder =
                     methodCache.computeIfAbsent(
@@ -91,7 +92,7 @@ public class ProtocolBufferMessageBodyProvider
                             });
 
             final Message.Builder builder = (Message.Builder) newBuilder.invoke(type);
-            return builder.mergeFrom(uncompress).build();
+            return builder.mergeFrom(uncompressStream).build();
         }
         catch (Exception e) {
             throw new WebApplicationException(e);
@@ -130,6 +131,12 @@ public class ProtocolBufferMessageBodyProvider
             final OutputStream entityStream)
             throws IOException
     {
-        message.writeTo(entityStream);
+        if (message instanceof ReadResponse)
+        {
+            message.writeTo(new SnappyOutputStream(entityStream));
+        }
+        else {
+            message.writeTo(entityStream);
+        }
     }
 }

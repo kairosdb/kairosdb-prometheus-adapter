@@ -55,7 +55,7 @@ public class WriteAdapterResource
         this.dataPointPublisher = eventBus.createPublisher(DataPointEvent.class);
         host = InetAddress.getLocalHost().getHostName();
 
-        prefix = config.getProperty("kairosdb.plugin.prometheus-adapter.writer.prefix");
+        prefix = config.getProperty("kairosdb.plugin.prometheus-adapter.prefix");
         String dropMetrics = config.getProperty("kairosdb.plugin.prometheus-adapter.writer.dropMetrics");
         String dropLabels = config.getProperty("kairosdb.plugin.prometheus-adapter.writer.dropLabels");
         createRegexPatterns(dropMetrics, dropMetricsRegex);
@@ -128,6 +128,9 @@ public class WriteAdapterResource
 
     private void publishMetric(String metricName, long value, String tagName, String tagValue)
     {
+        if (logger.isDebugEnabled()) {
+            logger.debug("Publishing metric " + metricName + " with value of " + value);
+        }
         dataPointPublisher.post(new DataPointEvent(metricName,
                 ImmutableSortedMap.of("host", host, tagName, tagValue),
                 new LongDataPoint(System.currentTimeMillis(), value)));
