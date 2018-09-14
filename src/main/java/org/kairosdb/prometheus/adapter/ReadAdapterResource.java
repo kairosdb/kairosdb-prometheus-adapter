@@ -101,9 +101,11 @@ public class ReadAdapterResource
     private QueryResult formatPrometheusResponse(List<DataPointGroup> results)
     {
         QueryResult.Builder builder = QueryResult.newBuilder();
+        logger.info("Number of results =" + results.size());
 
         for (DataPointGroup result : results) {
             TimeSeries.Builder timeSeriesBuilder = TimeSeries.newBuilder();
+            logger.info("Number of tags: " + result.getTagNames().size());
             for (String tagName : result.getTagNames()) {
                 for (String tagValue : result.getTagValues(tagName)) {
                     timeSeriesBuilder.addLabels(Label.newBuilder()
@@ -113,6 +115,7 @@ public class ReadAdapterResource
                 }
             }
 
+            boolean foundDatapoints = false;
             while(result.hasNext())
             {
                 DataPoint dataPoint = result.next();
@@ -121,6 +124,12 @@ public class ReadAdapterResource
                         .setTimestamp(dataPoint.getTimestamp())
                         .setValue(dataPoint.getDoubleValue())
                         .build());
+                foundDatapoints = true;
+            }
+
+            if (foundDatapoints)
+            {
+                builder.addTimeseries(timeSeriesBuilder);
             }
         }
         return builder.build();
