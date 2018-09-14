@@ -58,7 +58,8 @@ public class ReadAdapterResource
     @POST
 //    @Consumes("application/protobuf")
     @Consumes(MediaType.WILDCARD) // Todo Is there a better way?
-    @Produces("application/protobuf")
+//    @Produces("application/protobuf")
+    @Produces(MediaType.WILDCARD)
     @Path("/read")
     public ReadResponse read(ReadRequest request)
     {
