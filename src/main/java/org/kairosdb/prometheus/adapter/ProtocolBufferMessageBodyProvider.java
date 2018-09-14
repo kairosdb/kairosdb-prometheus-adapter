@@ -16,14 +16,11 @@ package org.kairosdb.prometheus.adapter;
  * limitations under the License.
  */
 
-import com.google.protobuf.CodedOutputStream;
 import com.google.protobuf.Message;
+import de.jarnbjo.jsnappy.SnzInputStream;
+import de.jarnbjo.jsnappy.SnzOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.xerial.snappy.Snappy;
-import org.xerial.snappy.SnappyFramedOutputStream;
-import org.xerial.snappy.SnappyInputStream;
-import org.xerial.snappy.SnappyOutputStream;
 import prometheus.Remote.ReadResponse;
 
 import javax.ws.rs.Consumes;
@@ -84,7 +81,8 @@ public class ProtocolBufferMessageBodyProvider
     {
 
         try {
-            SnappyInputStream uncompressStream = new SnappyInputStream(entityStream);
+//            SnappyInputStream uncompressStream = new SnappyInputStream(entityStream);
+            SnzInputStream uncompressStream = new SnzInputStream(entityStream);
 
             final Method newBuilder =
                     methodCache.computeIfAbsent(
@@ -148,10 +146,14 @@ public class ProtocolBufferMessageBodyProvider
 //            SnappyOutputStream outputStream = new SnappyOutputStream(entityStream);
 //            message.writeTo(outputStream);
 //            outputStream.flush();
+//
+//            SnappyFramedOutputStream outputStream = new SnappyFramedOutputStream(entityStream);
+//            message.writeTo(outputStream);
+//            outputStream.flush();
 
-            SnappyFramedOutputStream outputStream = new SnappyFramedOutputStream(entityStream);
-            message.writeTo(outputStream);
-            outputStream.flush();
+            SnzOutputStream snzOutputStream = new SnzOutputStream(entityStream);
+            message.writeTo(snzOutputStream);
+            snzOutputStream.flush();
         }
         else {
             logger.info("message is NOT an instance of ReadResponse");
