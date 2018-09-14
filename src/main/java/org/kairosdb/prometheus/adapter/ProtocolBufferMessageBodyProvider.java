@@ -136,25 +136,25 @@ public class ProtocolBufferMessageBodyProvider
             final OutputStream entityStream)
             throws IOException
     {
-        if (message instanceof ReadResponse)
-        {
-            logger.info("message is an instance of ReadResponse");
-//            byte[] bytes = message.toByteArray();
-//            byte[] compress = Snappy.compress(bytes);
-//            entityStream.write(compress);
-//            entityStream.flush();
-//            SnappyOutputStream outputStream = new SnappyOutputStream(entityStream);
+//        if (message instanceof ReadResponse)
+//        {
+//            logger.info("message is an instance of ReadResponse");
+////            byte[] bytes = message.toByteArray();
+////            byte[] compress = Snappy.compress(bytes);
+////            entityStream.write(compress);
+////            entityStream.flush();
+////            SnappyOutputStream outputStream = new SnappyOutputStream(entityStream);
+////            message.writeTo(outputStream);
+////            outputStream.flush();
+////
+////            SnappyFramedOutputStream outputStream = new SnappyFramedOutputStream(entityStream);
+//            SnappyHadoopCompatibleOutputStream outputStream = new SnappyHadoopCompatibleOutputStream(entityStream);
 //            message.writeTo(outputStream);
 //            outputStream.flush();
-//
-//            SnappyFramedOutputStream outputStream = new SnappyFramedOutputStream(entityStream);
-            SnappyHadoopCompatibleOutputStream outputStream = new SnappyHadoopCompatibleOutputStream(entityStream);
-            message.writeTo(outputStream);
-            outputStream.flush();
-        }
-        else {
+//        }
+//        else {
             logger.info("message is NOT an instance of ReadResponse");
             message.writeTo(entityStream);
-        }
+//        }
     }
 }
