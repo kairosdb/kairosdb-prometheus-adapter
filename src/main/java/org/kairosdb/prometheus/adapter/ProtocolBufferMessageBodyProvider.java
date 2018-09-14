@@ -17,6 +17,8 @@ package org.kairosdb.prometheus.adapter;
  */
 
 import com.google.protobuf.Message;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xerial.snappy.SnappyInputStream;
 import org.xerial.snappy.SnappyOutputStream;
 import prometheus.Remote.ReadResponse;
@@ -54,6 +56,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ProtocolBufferMessageBodyProvider
         implements MessageBodyReader<Message>, MessageBodyWriter<Message>
 {
+    private static final Logger logger = LoggerFactory.getLogger(ProtocolBufferMessageBodyProvider.class);
+
     private final Map<Class<Message>, Method> methodCache = new ConcurrentHashMap<>();
 
     @Override
@@ -133,9 +137,11 @@ public class ProtocolBufferMessageBodyProvider
     {
         if (message instanceof ReadResponse)
         {
+            logger.info("message is an instance of ReadResponse");
             message.writeTo(new SnappyOutputStream(entityStream));
         }
         else {
+            logger.info("message is NOT an instance of ReadResponse");
             message.writeTo(entityStream);
         }
     }
