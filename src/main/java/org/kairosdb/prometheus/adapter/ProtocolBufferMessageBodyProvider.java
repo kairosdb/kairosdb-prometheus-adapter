@@ -16,10 +16,12 @@ package org.kairosdb.prometheus.adapter;
  * limitations under the License.
  */
 
+import com.google.protobuf.CodedOutputStream;
 import com.google.protobuf.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xerial.snappy.Snappy;
+import org.xerial.snappy.SnappyFramedOutputStream;
 import org.xerial.snappy.SnappyInputStream;
 import org.xerial.snappy.SnappyOutputStream;
 import prometheus.Remote.ReadResponse;
@@ -139,13 +141,17 @@ public class ProtocolBufferMessageBodyProvider
         if (message instanceof ReadResponse)
         {
             logger.info("message is an instance of ReadResponse");
-            byte[] bytes = message.toByteArray();
-            byte[] compress = Snappy.compress(bytes);
-            entityStream.write(compress);
-            entityStream.flush();
+//            byte[] bytes = message.toByteArray();
+//            byte[] compress = Snappy.compress(bytes);
+//            entityStream.write(compress);
+//            entityStream.flush();
 //            SnappyOutputStream outputStream = new SnappyOutputStream(entityStream);
 //            message.writeTo(outputStream);
 //            outputStream.flush();
+
+            SnappyFramedOutputStream outputStream = new SnappyFramedOutputStream(entityStream);
+            message.writeTo(outputStream);
+            outputStream.flush();
         }
         else {
             logger.info("message is NOT an instance of ReadResponse");
