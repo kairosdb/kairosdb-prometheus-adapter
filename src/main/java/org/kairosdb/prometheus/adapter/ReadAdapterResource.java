@@ -95,7 +95,9 @@ public class ReadAdapterResource
             }
         }
 
-        return responseBuilder.build();
+        ReadResponse response = responseBuilder.build();
+        logger.info("response = " + response);
+        return response;
     }
 
     private QueryResult formatPrometheusResponse(List<DataPointGroup> results)
