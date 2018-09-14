@@ -17,10 +17,11 @@ package org.kairosdb.prometheus.adapter;
  */
 
 import com.google.protobuf.Message;
-import de.jarnbjo.jsnappy.SnzInputStream;
-import de.jarnbjo.jsnappy.SnzOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xerial.snappy.SnappyFramedOutputStream;
+import org.xerial.snappy.SnappyHadoopCompatibleOutputStream;
+import org.xerial.snappy.SnappyInputStream;
 import prometheus.Remote.ReadResponse;
 
 import javax.ws.rs.Consumes;
@@ -81,8 +82,7 @@ public class ProtocolBufferMessageBodyProvider
     {
 
         try {
-//            SnappyInputStream uncompressStream = new SnappyInputStream(entityStream);
-            SnzInputStream uncompressStream = new SnzInputStream(entityStream);
+            SnappyInputStream uncompressStream = new SnappyInputStream(entityStream);
 
             final Method newBuilder =
                     methodCache.computeIfAbsent(
@@ -148,12 +148,9 @@ public class ProtocolBufferMessageBodyProvider
 //            outputStream.flush();
 //
 //            SnappyFramedOutputStream outputStream = new SnappyFramedOutputStream(entityStream);
-//            message.writeTo(outputStream);
-//            outputStream.flush();
-
-            SnzOutputStream snzOutputStream = new SnzOutputStream(entityStream);
-            message.writeTo(snzOutputStream);
-            snzOutputStream.flush();
+            SnappyHadoopCompatibleOutputStream outputStream = new SnappyHadoopCompatibleOutputStream(entityStream);
+            message.writeTo(outputStream);
+            outputStream.flush();
         }
         else {
             logger.info("message is NOT an instance of ReadResponse");
