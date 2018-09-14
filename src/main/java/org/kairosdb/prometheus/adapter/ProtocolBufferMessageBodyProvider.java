@@ -139,13 +139,13 @@ public class ProtocolBufferMessageBodyProvider
         if (message instanceof ReadResponse)
         {
             logger.info("message is an instance of ReadResponse");
-//            byte[] bytes = message.toByteArray();
-//            byte[] compress = Snappy.compress(bytes);
-//            entityStream.write(compress);
-//            entityStream.flush();
-            SnappyOutputStream outputStream = new SnappyOutputStream(entityStream);
-            message.writeTo(outputStream);
-            outputStream.flush();
+            byte[] bytes = message.toByteArray();
+            byte[] compress = Snappy.compress(bytes);
+            entityStream.write(compress);
+            entityStream.flush();
+//            SnappyOutputStream outputStream = new SnappyOutputStream(entityStream);
+//            message.writeTo(outputStream);
+//            outputStream.flush();
         }
         else {
             logger.info("message is NOT an instance of ReadResponse");
