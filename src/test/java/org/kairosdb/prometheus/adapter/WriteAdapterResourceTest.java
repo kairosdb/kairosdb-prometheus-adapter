@@ -52,7 +52,7 @@ public class WriteAdapterResourceTest
             throws UnknownHostException
     {
         Properties properties = new Properties();
-        WriteAdapterResource writeAdapterResource = new WriteAdapterResource(mockEventBus, properties);
+        WriteAdapterResource writeAdapterResource = new WriteAdapterResource(mockEventBus, "", "", "");
 
         long timeStamp = System.currentTimeMillis();
         ImmutableSortedMap<String, String> labels = ImmutableSortedMap.of("label1", "value1", "label2", "value2");
@@ -71,23 +71,23 @@ public class WriteAdapterResourceTest
     public void testDroppedMetrics()
             throws UnknownHostException
     {
-        Properties properties = new Properties();
-        properties.put("kairosdb.plugin.prometheus-adapter.writer.dropMetrics", "^foo_.*$");
-        WriteAdapterResource writeAdapterResource = new WriteAdapterResource(mockEventBus, properties);
+        WriteAdapterResource writeAdapterResource = new WriteAdapterResource(mockEventBus, "myPrefix.", "^foo_.*$,^scrape_duration_seconds$","");
 
         long timeStamp = System.currentTimeMillis();
         ImmutableSortedMap<String, String> labels = ImmutableSortedMap.of("label1", "value1", "label2", "value2");
         TimeSeries timeSeries1 = newTimeSeries("foo_bar", ImmutableMap.of(timeStamp, 1.0), labels);
         TimeSeries timeSeries2 = newTimeSeries("foo.bar", ImmutableMap.of(timeStamp, 2.0), labels);
         TimeSeries timeSeries3 = newTimeSeries("foo_bob", ImmutableMap.of(timeStamp, 3.0), labels);
-        Response response = writeAdapterResource.write(newRequest(timeSeries1, timeSeries2, timeSeries3));
+        TimeSeries timeSeries4 = newTimeSeries("scrape_duration_seconds", ImmutableMap.of(timeStamp, 3.0), labels);
+        Response response = writeAdapterResource.write(newRequest(timeSeries1, timeSeries2, timeSeries3, timeSeries4));
 
         assertThat(response.getStatus(), equalTo(200));
-        verify(mockPublisher).post(new DataPointEvent("foo.bar", labels, new DoubleDataPoint(timeStamp, 2.0)));
-        verify(mockPublisher, never()).post(new DataPointEvent("foo_bar", labels, new DoubleDataPoint(timeStamp, 1.0)));
-        verify(mockPublisher, never()).post(new DataPointEvent("foo_bob", labels, new DoubleDataPoint(timeStamp, 3.0)));
+        verify(mockPublisher).post(new DataPointEvent("myPrefix.foo.bar", labels, new DoubleDataPoint(timeStamp, 2.0)));
+        verify(mockPublisher, never()).post(new DataPointEvent("myPrefix.foo_bar", labels, new DoubleDataPoint(timeStamp, 1.0)));
+        verify(mockPublisher, never()).post(new DataPointEvent("myPrefix.foo_bob", labels, new DoubleDataPoint(timeStamp, 3.0)));
+        verify(mockPublisher, never()).post(new DataPointEvent("myPrefix.scrape_duration_seconds", labels, new DoubleDataPoint(timeStamp, 3.0)));
         verifyInternalMetrics("kairosdb.prometheus.write-adapter.metrics-sent.count", "sent", 1.0);
-        verifyInternalMetrics("kairosdb.prometheus.write-adapter.metrics-sent.count", "dropped", 2.0);
+        verifyInternalMetrics("kairosdb.prometheus.write-adapter.metrics-sent.count", "dropped", 3.0);
     }
 
     @Test
@@ -97,9 +97,7 @@ public class WriteAdapterResourceTest
     public void testDroppedLabels()
             throws UnknownHostException
     {
-        Properties properties = new Properties();
-        properties.put("kairosdb.plugin.prometheus-adapter.writer.dropLabels", "^label1$, ^label2$ ,^label3$");
-        WriteAdapterResource writeAdapterResource = new WriteAdapterResource(mockEventBus, properties);
+        WriteAdapterResource writeAdapterResource = new WriteAdapterResource(mockEventBus, "", "", "^label1$, ^label2$ ,^label3$");
 
         long timeStamp = System.currentTimeMillis();
         ImmutableSortedMap<String, String> labels = ImmutableSortedMap.of("label1", "value1", "label2", "value2", "fooLabel", "fooValue");
@@ -118,9 +116,7 @@ public class WriteAdapterResourceTest
     public void testPrefix()
             throws UnknownHostException
     {
-        Properties properties = new Properties();
-        properties.put("kairosdb.plugin.prometheus-adapter.prefix", "thePrefix.");
-        WriteAdapterResource writeAdapterResource = new WriteAdapterResource(mockEventBus, properties);
+        WriteAdapterResource writeAdapterResource = new WriteAdapterResource(mockEventBus,"thePrefix." , "", "");
 
         long timeStamp = System.currentTimeMillis();
         ImmutableSortedMap<String, String> labels = ImmutableSortedMap.of("label1", "value1", "label2", "value2");
@@ -143,8 +139,7 @@ public class WriteAdapterResourceTest
     public void testException()
             throws UnknownHostException
     {
-        Properties properties = new Properties();
-        WriteAdapterResource writeAdapterResource = new WriteAdapterResource(mockEventBus, properties);
+        WriteAdapterResource writeAdapterResource = new WriteAdapterResource(mockEventBus, "", "", "");
 
         long timeStamp = System.currentTimeMillis();
         ImmutableSortedMap<String, String> labels = ImmutableSortedMap.of("label1", "value1", "label2", "value2");

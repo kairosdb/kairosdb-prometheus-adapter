@@ -3,6 +3,7 @@ package org.kairosdb.prometheus.adapter;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.ImmutableSortedMap.Builder;
 import com.google.inject.Inject;
+import com.google.inject.name.Named;
 import org.h2.util.StringUtils;
 import org.kairosdb.core.datapoints.DoubleDataPoint;
 import org.kairosdb.core.datapoints.LongDataPoint;
@@ -20,13 +21,10 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.HashSet;
-import java.util.Properties;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -39,51 +37,71 @@ public class WriteAdapterResource
     private static final Logger logger = LoggerFactory.getLogger(WriteAdapterResource.class);
     private static final String METRIC_METRICS_SENT = "kairosdb.prometheus.write-adapter.metrics-sent.count";
     private static final String METRIC_EXCEPTIONS = "kairosdb.prometheus.write-adapter.exception.count";
+    private static final String METRIC_LABELS_DROPPED = "kairosdb.prometheus.write-adapter.labels-dropped.count";
+
+    private static final String METRIC_PREFIX_PROP = "kairosdb.plugin.prometheus-adapter.prefix";
+    private static final String DROP_METRICS_PROP = "kairosdb.plugin.prometheus-adapter.writer.dropMetrics";
+    private static final String DROP_LABELS_PROP = "kairosdb.plugin.prometheus-adapter.writer.dropLabels";
 
     private final Publisher<DataPointEvent> dataPointPublisher;
     private final String host;
-    private final String prefix;
+    private final String metricPrefix;
     private final Set<Pattern> dropMetricsRegex = new HashSet<>();
     private final Set<Pattern> dropLablelsRegex = new HashSet<>();
 
     @Inject
-    public WriteAdapterResource(FilterEventBus eventBus, Properties config)
+    public WriteAdapterResource(FilterEventBus eventBus, @Named(METRIC_PREFIX_PROP) String metricPrefix,
+            @Named(DROP_METRICS_PROP) String dropMetrics, @Named(DROP_LABELS_PROP) String dropLabels)
             throws UnknownHostException
     {
         checkNotNull(eventBus, "eventBus must not be null");
-        checkNotNull(config, "config must not be null");
         this.dataPointPublisher = eventBus.createPublisher(DataPointEvent.class);
         host = InetAddress.getLocalHost().getHostName();
 
-        prefix = config.getProperty("kairosdb.plugin.prometheus-adapter.prefix");
-        String dropMetrics = config.getProperty("kairosdb.plugin.prometheus-adapter.writer.dropMetrics");
-        String dropLabels = config.getProperty("kairosdb.plugin.prometheus-adapter.writer.dropLabels");
+        this.metricPrefix = metricPrefix;
         createRegexPatterns(dropMetrics, dropMetricsRegex);
         createRegexPatterns(dropLabels, dropLablelsRegex);
+
+        if (!StringUtils.isNullOrEmpty(dropMetrics)) {
+            logger.info("Dropping metrics that match these regex expressions: " + dropMetrics);
+        }
+        if (!StringUtils.isNullOrEmpty(dropLabels)) {
+            logger.info("Dropping lables that match these regex expressions: " + dropLabels);
+        }
     }
 
     @SuppressWarnings("ConstantConditions")
-    //    @Consumes("application/protobuf")
     @POST
-    @Consumes(MediaType.WILDCARD) // Todo Is there a better way?
+    @Consumes("application/x-protobuf")
     @Produces("text/plain")
     @Path("/write")
     public Response write(WriteRequest request)
     {
+        if (logger.isTraceEnabled())
+        {
+            logger.trace("Request: %s", request);
+        }
+
         int metricsSent = 0;
         int metricsDropped = 0;
+        int labelsDropped = 0;
         try {
             for (TimeSeries timeSeries : request.getTimeseriesList()) {
                 String metricName = null;
                 Builder<String, String> tagBuilder = ImmutableSortedMap.naturalOrder();
                 for (Label label : timeSeries.getLabelsList()) {
                     if (label.getName().equals("__name__")) {
-                        metricName = prefix != null ? prefix + label.getValue() : label.getValue();
+                        metricName = label.getValue();
                     }
                     else {
-                        if (shouldKeep(label.getName(), dropLablelsRegex))
-                        {
+                        if (shouldKeep(label.getName(), dropLablelsRegex)) {
                             tagBuilder.put(label.getName(), label.getValue());
+                        }
+                        else {
+                            labelsDropped++;
+                            if (logger.isDebugEnabled()) {
+                                logger.debug("Label {} was dropped because it matched the drop label regex for metric {}", label.getName(), metricName);
+                            }
                         }
                     }
                 }
@@ -92,17 +110,19 @@ public class WriteAdapterResource
 
                 if (shouldKeep(metricName, dropMetricsRegex)) {
                     for (Sample sample : timeSeries.getSamplesList()) {
-                        publishMetric(metricName, sample.getTimestamp(), sample.getValue(), tagBuilder.build());
+                        publishMetric(metricPrefix != null ? metricPrefix + metricName : metricName, sample.getTimestamp(), sample.getValue(), tagBuilder.build());
                         metricsSent++;
                     }
                 }
-                else
-                {
+                else {
                     metricsDropped++;
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Metric was dropped because it matched the drop metric regex {}", metricName);
+                    }
                 }
             }
 
-            publishMetrics(request.getTimeseriesList().size(), metricsSent, metricsDropped);
+            publishMetrics(request.getTimeseriesList().size(), metricsSent, metricsDropped, labelsDropped);
 
             return Response.status(Response.Status.OK).build();
         }
@@ -113,26 +133,39 @@ public class WriteAdapterResource
         }
     }
 
-    private void publishMetrics(int metricsReceived, int metricsSent, int metricsDropped)
+    private void publishMetrics(int metricsReceived, int metricsSent, int metricsDropped, int labelsDropped)
     {
         publishMetric(METRIC_METRICS_SENT, metricsSent, "status", "sent");
 
-        if (metricsReceived - metricsSent > 0) {
+        if (metricsReceived - metricsSent - metricsDropped > 0) {
             publishMetric(METRIC_METRICS_SENT, metricsReceived - metricsSent - metricsDropped, "status", "failed");
         }
 
         if (metricsDropped > 0) {
             publishMetric(METRIC_METRICS_SENT, metricsDropped, "status", "dropped");
         }
+
+        if (labelsDropped > 0) {
+            publishMetric(METRIC_LABELS_DROPPED, labelsDropped, null, null);
+        }
     }
 
+    @SuppressWarnings("ConstantConditions")
     private void publishMetric(String metricName, long value, String tagName, String tagValue)
     {
         if (logger.isDebugEnabled()) {
             logger.debug("Publishing metric " + metricName + " with value of " + value);
         }
-        dataPointPublisher.post(new DataPointEvent(metricName,
-                ImmutableSortedMap.of("host", host, tagName, tagValue),
+
+        ImmutableSortedMap<String, String> tags;
+        if (!StringUtils.isNullOrEmpty(tagName)) {
+            tags = ImmutableSortedMap.of("host", this.host, tagName, tagValue);
+        }
+        else {
+            tags = ImmutableSortedMap.of("host", this.host);
+        }
+
+        dataPointPublisher.post(new DataPointEvent(metricName, tags,
                 new LongDataPoint(System.currentTimeMillis(), value)));
     }
 
