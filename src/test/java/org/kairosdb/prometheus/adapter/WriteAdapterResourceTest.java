@@ -20,7 +20,6 @@ import javax.ws.rs.core.Response;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
-import java.util.Properties;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertThat;
@@ -51,7 +50,6 @@ public class WriteAdapterResourceTest
     public void test()
             throws UnknownHostException
     {
-        Properties properties = new Properties();
         WriteAdapterResource writeAdapterResource = new WriteAdapterResource(mockEventBus, "", "", "");
 
         long timeStamp = System.currentTimeMillis();
@@ -154,6 +152,29 @@ public class WriteAdapterResourceTest
         verify(mockPublisher, never()).post(new DataPointEvent("thePrefix.foo.bar", labels, new DoubleDataPoint(timeStamp, 2.0)));
         verify(mockPublisher, never()).post(new DataPointEvent("thePrefix.foo_bob", labels, new DoubleDataPoint(timeStamp, 3.0)));
         verifyInternalExceptionMetric("kairosdb.prometheus.write-adapter.exception.count", "No metric name was specified for the given metric. Missing __name__ label.");
+    }
+
+    @Test
+    public void test_NAN_or_Infinite()
+            throws UnknownHostException
+    {
+        WriteAdapterResource writeAdapterResource = new WriteAdapterResource(mockEventBus, "", "", "");
+
+        long timeStamp = System.currentTimeMillis();
+        TimeSeries timeSeries1 = newTimeSeries("foo_bar1", ImmutableMap.of(timeStamp, 1.0), ImmutableSortedMap.of());
+        TimeSeries timeSeries2 = newTimeSeries("foo_bar2", ImmutableMap.of(timeStamp, Double.NaN), ImmutableSortedMap.of());
+        TimeSeries timeSeries3 = newTimeSeries("foo_bar3", ImmutableMap.of(timeStamp, Double.NEGATIVE_INFINITY), ImmutableSortedMap.of());
+        TimeSeries timeSeries4 = newTimeSeries("foo_bar4", ImmutableMap.of(timeStamp, Double.POSITIVE_INFINITY), ImmutableSortedMap.of());
+        Response response = writeAdapterResource.write(newRequest(timeSeries1, timeSeries2, timeSeries3, timeSeries4));
+
+        assertThat(response.getStatus(), equalTo(200));
+        verify(mockPublisher).post(new DataPointEvent("foo_bar1", ImmutableSortedMap.of(), new DoubleDataPoint(timeStamp, 1.0)));
+        verify(mockPublisher, never()).post(new DataPointEvent("foo_bar2", ImmutableSortedMap.of(), new DoubleDataPoint(timeStamp, Double.NaN)));
+        verify(mockPublisher, never()).post(new DataPointEvent("foo_bar3", ImmutableSortedMap.of(), new DoubleDataPoint(timeStamp, Double.NEGATIVE_INFINITY)));
+        verify(mockPublisher, never()).post(new DataPointEvent("foo_bar4", ImmutableSortedMap.of(), new DoubleDataPoint(timeStamp, Double.POSITIVE_INFINITY)));
+        verifyInternalMetrics("kairosdb.prometheus.write-adapter.metrics-sent.count", "sent", 1.0);
+        verifyInternalMetrics("kairosdb.prometheus.write-adapter.metrics-sent.count", "dropped", 3.0);
+
     }
 
     private void verifyInternalMetrics(String metricName, String status, double count)

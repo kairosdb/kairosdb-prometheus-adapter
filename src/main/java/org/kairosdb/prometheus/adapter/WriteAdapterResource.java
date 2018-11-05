@@ -110,8 +110,17 @@ public class WriteAdapterResource
 
                 if (shouldKeep(metricName, dropMetricsRegex)) {
                     for (Sample sample : timeSeries.getSamplesList()) {
-                        publishMetric(metricPrefix != null ? metricPrefix + metricName : metricName, sample.getTimestamp(), sample.getValue(), tagBuilder.build());
-                        metricsSent++;
+                        if (isValidNumber(sample.getValue())) {
+                            publishMetric(metricPrefix != null ? metricPrefix + metricName : metricName, sample.getTimestamp(), sample.getValue(), tagBuilder.build());
+                            metricsSent++;
+                        }
+                        else
+                        {
+                            metricsDropped++;
+                            if (logger.isDebugEnabled()) {
+                                logger.debug("Metric was dropped because its value is Infinite or NAN {}", metricName);
+                            }
+                        }
                     }
                 }
                 else {
@@ -133,7 +142,13 @@ public class WriteAdapterResource
         }
     }
 
-    private void publishMetrics(int metricsReceived, int metricsSent, int metricsDropped, int labelsDropped)
+    private boolean isValidNumber(double value)
+    {
+        return !Double.isNaN(value) && !Double.isInfinite(value);
+    }
+
+    private void
+    publishMetrics(int metricsReceived, int metricsSent, int metricsDropped, int labelsDropped)
     {
         publishMetric(METRIC_METRICS_SENT, metricsSent, "status", "sent");
 
