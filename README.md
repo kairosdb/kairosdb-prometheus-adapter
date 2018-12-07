@@ -25,4 +25,4 @@ These optional properties provide ways to manipulate or restrict the data writte
 
 
 ### Read Adapter
-Coming Soon...
+Not currently implemented
