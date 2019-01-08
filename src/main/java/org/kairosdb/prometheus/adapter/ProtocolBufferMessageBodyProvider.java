@@ -19,11 +19,8 @@ package org.kairosdb.prometheus.adapter;
 import com.google.protobuf.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.xerial.snappy.Snappy;
 import org.xerial.snappy.SnappyFramedOutputStream;
-import org.xerial.snappy.SnappyHadoopCompatibleOutputStream;
 import org.xerial.snappy.SnappyInputStream;
-import org.xerial.snappy.SnappyOutputStream;
 import prometheus.Remote.ReadResponse;
 
 import javax.ws.rs.Consumes;
@@ -34,10 +31,6 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.ext.MessageBodyReader;
 import javax.ws.rs.ext.MessageBodyWriter;
 import javax.ws.rs.ext.Provider;
-import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -144,19 +137,7 @@ public class ProtocolBufferMessageBodyProvider
     {
         if (message instanceof ReadResponse)
         {
-            logger.info("message is an instance of ReadResponse");
-//            byte[] bytes = message.toByteArray();
-//            byte[] compress = Snappy.compress(bytes);
-//            entityStream.write(compress);
-//            entityStream.flush();
-//            entityStream.close();
-//            SnappyOutputStream outputStream = new SnappyOutputStream(entityStream);
-//            message.writeTo(outputStream);
-//            outputStream.flush();
-//            outputStream.close();
-//
             SnappyFramedOutputStream outputStream = new SnappyFramedOutputStream(entityStream);
-//            SnappyHadoopCompatibleOutputStream outputStream = new SnappyHadoopCompatibleOutputStream(entityStream);
             message.writeTo(outputStream);
             outputStream.close();
         }
